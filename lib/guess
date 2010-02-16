@@ -1,0 +1,24 @@
+#!./gawkldr -f
+#
+# VitaminA word guessing plugin
+#
+# Copyright Přemysl Janouch 2010. All rights reserved.
+# See the file LICENSE for licensing information.
+#
+#
+
+@include utils.awk
+
+BEGIN \
+{
+	RS = "\r\n"
+	ORS = RS
+
+	print "privmsg"
+	fflush("")
+}
+
+{
+	print ""
+}
+

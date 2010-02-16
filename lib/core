@@ -1,0 +1,206 @@
+#!./gawkldr -f
+#
+# VitaminA IRC bot core
+#
+# Copyright Přemysl Janouch 2009 - 2010. All rights reserved.
+# See the file LICENSE for licensing information.
+#
+# Long live, GAWK
+#
+#
+
+@include utils.awk
+
+BEGIN \
+{
+	print "VitaminA IRC bot 2.0"
+
+	loadconfig()
+	config["datadir"] = datadir
+
+	loadplugins()
+
+	RS = "\r\n"
+	ORS = RS
+
+	# Not very helpful, I know
+	if (!config["irchost"] || !config["ircport"] \
+		|| !config["nickname"] || !config["username"] || !config["fullname"])
+		print "Configuration is not complete"
+exit
+
+	# Register to the server
+	print("Connecting to " config["irchost"] ":" config["ircport"] "...")
+	ircfile = "/inet/tcp/0/" config["irchost"] "/" config["ircport"]
+	print("NICK " config["nickname"]) |& ircfile
+	print("USER " config["username"] " 8 * :" config["fullname"]) |& ircfile
+	ircready = 0
+
+	# Run a message loop
+	while ((ircfile |& getline) > 0)
+	{
+		parse($0)
+
+		# Clone (It may get overwritten
+		# in processserver().)
+		delete mxparam
+		for (x in mparam)
+			mxparam[x] = mparam[x]
+		mxwho = mwho
+		mxcmd = mcmd
+
+		processserver()
+	}
+}
+
+function loadconfig (    i, ret, key, value)
+{
+	print "Loading configuration..."
+
+	# The datadir variable is set by the launcher script.
+	if (datadir)
+	{
+		
+		while ((ret = getline < (datadir "/vitamina.conf")) > 0)
+		{
+			# Comments and empty lines
+			if (/^#/ || !/.=/)
+				continue
+			
+			i = index($0, "=")
+			key = substr($0, 1, i - 1)
+			value = substr($0, i + 1)
+			config[key] = value
+		}
+		if (ret == -1)
+			print "Error while reading configuration"
+	}
+}
+
+function loadplugins (    parr, p, harr, h)
+{
+	# Split the 'plugins' variable (that we got from command
+	# line arguments) at commas into an array.
+	split(config["plugins"], parr, ",")
+	for (p in parr)
+	{
+		print "Loading plugin: " parr[p] "..."
+
+		# When a plugin is being loaded, it must print out
+		# the commands that should be forwarded to it.
+		("./" parr[p]) |& getline
+
+		# The commands are separated with a space.
+		split(toupper($0), harr, " ")
+
+		# Set the plugin as a handler for the commands
+		for (h in harr)
+		{
+			if (length(handlers[harr[h]]))
+				handlers[harr[h]] += "," parr[p]
+			else
+				handlers[harr[h]] = parr[p]
+		}
+	}
+}
+
+# Decide whether this user can command me
+function isadmin (who,    a)
+{
+	if (!config["admin"] || who ~ config["admin"])
+		return 1
+	return 0
+}
+
+function disableplugin (name,    h)
+{
+	# Go through the handlers and remove the plugin
+	# from everywhere.
+	for (h in handlers)
+	{
+		gsub("(^|,)" name "(,|$)", ",", handlers[h])
+		gsub("(^,|,$)", "", handlers[h])
+	}
+}
+
+function processplugin (name,    plugfile, i, out)
+{
+	# Read one line, process it, repeat
+	plugfile = "./" name
+	print |& plugfile
+	while (1)
+	{
+		i = plugfile |& getline out
+		if (i <= 0)
+		{
+			print "Error in plugin " name ", disabling it"
+			disableplugin(name)
+			break
+		}
+		# An empty line means "end of input for now"
+		if (!length(out))
+			break
+		parse(out)
+
+		# Special messages
+		if (mcmd == "VITAMINA")
+		{
+			if (mparam[0] == "getconfig")
+				print config[mparam[1]] |& plugfile
+		}
+		else
+			# Forward everything else to the IRC server
+			print out |& ircfile
+	}
+}
+
+function processserver (   i, s, t, sent)
+{
+	# Forward the message to plugins
+	t = handlers["all"] "," handlers[mxcmd]
+	gsub("(^,|,,|,$)", "", t)
+
+	split(t, s, ",")
+	for (t in s)
+	{
+		# Never send a message to a single
+		# plugin more than once
+		if (t in sent)
+			continue
+		sent[t] = 1
+
+		processplugin(t)
+	}
+
+	if (mxcmd == "PING")
+		print ("PONG :" mxparam[0]) |& ircfile
+	else if (!ircready && mcmd == "MODE")
+	{
+		print "Successfully connected"
+
+		ircready = 1
+		print ("JOIN :" config["autojoin"]) |& ircfile
+	}
+	else if (mxcmd == "PRIVMSG")
+	{
+		if (mxparam[1] ~ /^\!/ && isadmin(mxwho))
+		{
+			split(substr(mxparam[1], match(mxparam[1], \
+				/ |$/)), s, " ")
+
+			if (mxparam[1] == "!quit")
+				print ("QUIT") |& ircfile
+			else if (mxparam[1] ~ "^!join")
+			{
+				for (t in s)
+					print ("JOIN " s[t]) |& ircfile
+			}
+			else if (mxparam[1] ~ "^!part")
+			{
+				for (t in s)
+					print ("PART " s[t]) |& ircfile
+			}
+		}
+	}
+}
+

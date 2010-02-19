@@ -22,8 +22,8 @@ BEGIN \
 function logline (line, channel)
 {
 	time = strftime("%D %T | ")
-	print (time channel " | " line)
-	print (time line) >> (strftime(channel " %Y.%m.%d.log"))
+	botprint(time channel " | " line)
+	print(time line) >> (strftime(channel " %Y.%m.%d.log"))
 	fflush("")
 }
 
@@ -33,32 +33,32 @@ function logline (line, channel)
 	nick = substr(mwho, RSTART, RLENGTH)
 }
 
-mcmd == "PRIVMSG"
+mcmd == "PRIVMSG" \
 {
 	logline(" - " nick ": " mparam[1], mparam[0])
 }
 
-mcmd == "KICK"
+mcmd == "KICK" \
 {
 	logline(mparam[1] " was kicked from " mparam[0] " by " nick, mparam[0])
 }
 
-mcmd == "NOTICE"
+mcmd == "NOTICE" \
 {
 	logline("Notice from " nick ": " mparam[1], mparam[0])
 }
 
-mcmd == "JOIN"
+mcmd == "JOIN" \
 {
 	logline(nick " has joined " mparam[0], mparam[0])
 }
 
-mcmd == "PART"
+mcmd == "PART" \
 {
 	logline(nick " has left " mparam[0], mparam[0])
 }
 
-mcmd == "MODE"
+mcmd == "MODE" \
 {
 	s = 0
 	t = ""
@@ -71,5 +71,6 @@ mcmd == "MODE"
 
 {
 	print ""
+	fflush("")
 }
 

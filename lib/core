@@ -16,18 +16,18 @@ BEGIN \
 	print "VitaminA IRC bot 2.0"
 
 	loadconfig()
+	# The datadir variable is set by the launcher script.
 	config["datadir"] = datadir
-
-	loadplugins()
 
 	RS = "\r\n"
 	ORS = RS
+
+	loadplugins()
 
 	# Not very helpful, I know
 	if (!config["irchost"] || !config["ircport"] \
 		|| !config["nickname"] || !config["username"] || !config["fullname"])
 		print "Configuration is not complete"
-exit
 
 	# Register to the server
 	print("Connecting to " config["irchost"] ":" config["ircport"] "...")
@@ -57,7 +57,6 @@ function loadconfig (    i, ret, key, value)
 {
 	print "Loading configuration..."
 
-	# The datadir variable is set by the launcher script.
 	if (datadir)
 	{
 		
@@ -66,7 +65,7 @@ function loadconfig (    i, ret, key, value)
 			# Comments and empty lines
 			if (/^#/ || !/.=/)
 				continue
-			
+
 			i = index($0, "=")
 			key = substr($0, 1, i - 1)
 			value = substr($0, i + 1)
@@ -141,12 +140,13 @@ function processplugin (name,    plugfile, i, out)
 		if (!length(out))
 			break
 		parse(out)
-
 		# Special messages
 		if (mcmd == "VITAMINA")
 		{
 			if (mparam[0] == "getconfig")
 				print config[mparam[1]] |& plugfile
+			else if (mparam[0] == "print")
+				print mparam[1]
 		}
 		else
 			# Forward everything else to the IRC server
@@ -157,7 +157,7 @@ function processplugin (name,    plugfile, i, out)
 function processserver (   i, s, t, sent)
 {
 	# Forward the message to plugins
-	t = handlers["all"] "," handlers[mxcmd]
+	t = handlers["ALL"] "," handlers[mxcmd]
 	gsub("(^,|,,|,$)", "", t)
 
 	split(t, s, ",")
@@ -165,16 +165,16 @@ function processserver (   i, s, t, sent)
 	{
 		# Never send a message to a single
 		# plugin more than once
-		if (t in sent)
+		if (s[t] in sent)
 			continue
-		sent[t] = 1
+		sent[s[t]] = 1
 
-		processplugin(t)
+		processplugin(s[t])
 	}
 
 	if (mxcmd == "PING")
 		print ("PONG :" mxparam[0]) |& ircfile
-	else if (!ircready && mcmd == "MODE")
+	else if (!ircready && mxcmd == "MODE")
 	{
 		print "Successfully connected"
 

@@ -16,6 +16,12 @@ function getconfig (key)
 	return key
 }
 
+# Print a string (for plugins)
+function botprint (string)
+{
+	print "VITAMINA print :" string
+}
+
 # IRC message parsing
 # Input:
 #   line:   The message to be parsed

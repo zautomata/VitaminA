@@ -12,11 +12,14 @@
 function getconfig (key)
 {
 	print "VITAMINA getconfig :" key
+	fflush("")
 	getline key
 	return key
 }
 
 # Print a string (for plugins)
+# Input:
+#   string: The string to be printed
 function botprint (string)
 {
 	print "VITAMINA print :" string

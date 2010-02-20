@@ -19,11 +19,20 @@ BEGIN \
 	fflush("")
 }
 
+!initialized \
+{
+	# Get a directory to store log files to
+	logsdir = getconfig("datadir") "/logs"
+	if (system("test -d '" logsdir "'"))
+		system("mkdir -p '" logsdir "'")
+	initialized = 1
+}
+
 function logline (line, channel)
 {
 	time = strftime("%D %T | ")
 	botprint(time channel " | " line)
-	print(time line) >> (strftime(channel " %Y.%m.%d.log"))
+	print(time line) >> (logsdir "/" channel strftime(" %Y.%m.%d.log"))
 	fflush("")
 }
 

@@ -18,6 +18,134 @@ BEGIN \
 	fflush("")
 }
 
+function loadwords (    line)
+{
+	delete words
+	RS = "\r?\n"
+	while ((getline line < (guessdir "/words.txt")) > 0)
+	{
+		# Comments and empty lines
+		if (line ~ /^#/ || line !~ /.=/)
+			continue
+
+		words[length(words) + 1] = line
+	}
+	RS = ORS
+}
+
+!initialized \
+{
+	# Get a directory to load word files from
+	guessdir = getconfig("datadir") "/guess"
+	if (system("test -d '" guessdir "'"))
+		system("mkdir -p '" guessdir "'")
+	loadwords()
+	srand()
+	initialized = 1
+}
+
+{
+	parse($0)
+}
+
+mcmd == "PRIVMSG" \
+{
+	mparam[1] = tolower(mparam[1])
+
+	# Game context = either channel or user nickname
+	match(mwho, /^[^@!]+/)
+	ctx = substr(mwho, RSTART, RLENGTH)
+	if (mparam[0] ~ /^#/)
+	{
+		ctxquote = ctx ": "
+		ctx = mparam[0]
+	}
+	else
+		ctxquote = ""
+
+	if (mparam[1] == "!guess start")
+	{
+		if (!length(words))
+			pmrespond("No words in my database.")
+		else
+		{
+			pmrespond("Word guessing game started.")
+			pickword()
+		}
+	}
+	else if (mparam[1] == "!guess stop")
+	{
+		pmrespond("Word guessing game stopped.")
+		delete ingame[ctx]
+		delete wholeword[ctx]
+		delete currword[ctx]
+	}
+	else if (ingame[ctx])
+		processtext(mparam[1])
+}
+
+function processtext (text,    x, correct)
+{
+	correct = 0
+
+	# Guessing characters
+	if (length(text) == 1)
+	{
+		x = index(wholeword[ctx], text)
+		if (x && substr(currword[ctx], x, 1) == "_")
+		{
+			# Replace all the "_" characters.
+			do
+			{
+				currword[ctx] = substr(currword[ctx], 1, x - 1) \
+					text substr(currword[ctx], x + 1)
+			}
+			while (x < (x = x + index(substr(wholeword[ctx], x + 1), text)))
+				
+			if (currword[ctx] == tolower(wholeword[ctx]))
+				correct = 1
+			else
+				pmrespond(currword[ctx])
+		}
+		else if (x)
+			pmrespond(ctxquote "\"" text "\" is already in there.")
+		else
+			pmrespond(ctxquote "No \"" mparam[1] "\" in there.")
+	}
+	# Trying to guess the whole word or some noise on the channel
+	else if (text == tolower(wholeword[ctx]))
+		correct = 1
+
+	if (correct)
+	{
+		pmrespond(ctxquote "Correct! The answer is \"" wholeword[ctx] "\".")
+		pickword()
+	}
+}
+
+function pmrespond (text)
+{
+	print "PRIVMSG " ctx " :" text
+}
+
+function pickword (    line, i, n, s)
+{
+	n = 1 + int(rand() * length(words))
+	line = words[n]
+
+	# Print the hint
+	i = index(line, "=")
+	pmrespond("\x02" substr(line, 1, i - 1) ":\x0F (" n "/" length(words) ")")
+
+	# Print the progress
+	wholeword[ctx] = substr(line, i + 1)
+	currword[ctx] = wholeword[ctx]
+	gsub(/[a-zA-Z]/, "_", currword[ctx])
+	pmrespond(currword[ctx])
+
+	ingame[ctx] = 1
+}
+
 {
 	print ""
 	fflush("")

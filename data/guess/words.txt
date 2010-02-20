@@ -1,0 +1,11 @@
+First ISO/OSI layer=physical
+Second ISO/OSI layer=data link
+Third ISO/OSI layer=network
+Fourth ISO/OSI layer=transport
+Fifth ISO/OSI layer=session
+Sixth ISO/OSI layer=presentation
+Seventh ISO/OSI layer=application
+IRC=internet relay chat
+HTTP=hypertext transfer protocol
+FTP=file transfer protocol
+RFC=request for comments

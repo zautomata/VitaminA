@@ -1,0 +1,44 @@
+#!/bin/sh
+#
+# A heavily simplified configure script for VitaminA
+#
+# Copyright Přemysl Janouch 2010. All rights reserved.
+# See the file LICENSE for licensing information.
+#
+#
+
+# Check for awk
+which awk >/dev/null 2>&1
+if [ $? -eq 1 ]; then
+	echo "Error: Cannot find awk."
+	exit 1
+fi
+
+# Check for Makefile.in
+if [ ! -f Makefile.in ]; then
+	echo "Error: Makefile.in doesn't exist."
+	exit 1
+fi
+
+# Replace all the @longparameters@ in Makefile.in
+# and generate Makefile.
+echo $* | awk '
+BEGIN {
+	RS = " "; FS = "="
+	vars["prefix"] = "/usr/local"
+}
+/^--[^=].+/ {
+	gsub(/[+?*.|^$()\\]/, "\\&", $1)
+	vars[substr($1, 3)] = $2
+}
+END {
+	RS = "\n"
+	while (getline < "Makefile.in")
+	{
+		for (i in vars)
+			gsub("@" i "@", vars[i])
+		print
+	}
+}
+' > Makefile
+

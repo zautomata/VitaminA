@@ -1,0 +1,12 @@
+First configure VitaminA:
+	$ ./configure --prefix=/usr
+
+Let it update the launcher script:
+(This step can be skipped.)
+	$ make
+
+Then install the program:
+	$ make [DESTDIR=...] install
+Or make a .deb package:
+	$ make debian
+

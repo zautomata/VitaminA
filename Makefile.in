@@ -1,0 +1,70 @@
+# These will be filled in by ./configure
+PREFIX = @prefix@
+VERSION = 2.0
+PACKAGE = vitamina
+
+# The default target
+all: VitaminA \
+	lib/core \
+	lib/guess \
+	lib/logs \
+	lib/gawkldr \
+	lib/utils.awk
+
+# Delete everything we've created
+clean:
+	rm VitaminA
+
+# Configure the launcher script
+VitaminA: VitaminA.in
+	# Set the paths
+	sed "s|prefix=|&$(PREFIX)/lib/$(PACKAGE)|" \
+		VitaminA.in > VitaminA
+	chmod 755 VitaminA
+
+# Install the software
+install: all
+	mkdir -p $(DESTDIR)$(PREFIX)/{bin,lib/$(PACKAGE),share/$(PACKAGE)}
+	cp VitaminA $(DESTDIR)$(PREFIX)/bin
+	cp -r lib/* $(DESTDIR)$(PREFIX)/lib/$(PACKAGE)
+	cp -r share/* $(DESTDIR)$(PREFIX)/share/$(PACKAGE)
+	
+	# Remove the .svn nonsense
+	find $(DESTDIR)$(PREFIX) -type d -name .svn -print0 | xargs -0 rm -rf
+
+# Make a .deb package
+debian: all
+	# Install into a subdirectory
+	mkdir -p pkg
+	$(MAKE) DESTDIR=pkg install
+	
+	# Generate some files
+	echo "2.0" > debian-binary
+	
+	echo "Package: $(PACKAGE)" > control
+	echo "Version: $(VERSION)" >> control
+	echo "Section: net" >> control
+	echo "Depends: gawk" >> control
+	echo "Priority: optional" >> control
+	echo "Architecture: all" >> control
+	echo "Installed-Size: `du -ks pkg | cut -f 1`" >> control
+	echo "Maintainer: Přemysl Janouch <p.janouch@gmail.com>" >> control
+	echo "Homepage: http://vitamina.googlecode.com" >> control
+	echo "Description: Modular IRC bot written in GNU AWK" >> control
+	
+	cd pkg && find * -type f -print0 | xargs -0 md5sum > ../md5sums
+	tar -czf control.tar.gz control md5sums
+	
+	# Pack the data
+	cd pkg && tar -czf ../data.tar.gz *
+	
+	# Generate the package
+	ar -r $(PACKAGE)-$(VERSION).deb \
+		debian-binary control.tar.gz data.tar.gz
+	
+	# Clean up
+	rm -rf pkg debian-binary control md5sums control.tar.gz data.tar.gz
+
+
+.PHONY: all clean install debian
+

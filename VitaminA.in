@@ -1,0 +1,12 @@
+#!/bin/sh
+# VitaminA launcher script
+
+# Prefix to program files directories
+# (Relative to the location from where
+# this script is run.)
+prefix=
+
+# Run the bot
+cd $prefix/lib
+exec ./gawkldr -vprefix="$prefix" -f core
+

@@ -8,5 +8,5 @@ prefix=
 
 # Run the bot
 cd $prefix/lib
-exec ./gawkldr -vprefix="$prefix" -f core
+exec ./core -vprefix="$prefix"
 

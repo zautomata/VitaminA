@@ -1,4 +1,4 @@
-#!./gawkldr -f
+#!./gawkldr utils.awk
 #
 # VitaminA IRC bot core
 #
@@ -8,8 +8,6 @@
 # Long live, GAWK
 #
 #
-
-@include utils.awk
 
 BEGIN \
 {

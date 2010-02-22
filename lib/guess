@@ -1,4 +1,4 @@
-#!./gawkldr -f
+#!./gawkldr utils.awk
 #
 # VitaminA word guessing plugin
 #
@@ -6,8 +6,6 @@
 # See the file LICENSE for licensing information.
 #
 #
-
-@include utils.awk
 
 BEGIN \
 {

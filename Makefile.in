@@ -32,10 +32,21 @@ install: all
 	# Remove the .svn nonsense
 	find $(DESTDIR)$(PREFIX) -type d -name .svn -print0 | xargs -0 rm -rf
 
+# Make a source tarball
+tarball:
+	mkdir $(PACKAGE)-$(VERSION)
+	cp -r configure Makefile.in VitaminA.in INSTALL LICENSE lib share \
+		$(PACKAGE)-$(VERSION)
+	tar czf $(PACKAGE)-$(VERSION).tar.gz $(PACKAGE)-$(VERSION) \
+		--exclude=.svn
+	
+	# Clean up
+	rm -rf $(PACKAGE)-$(VERSION)
+
 # Make a .deb package
 debian: all
 	# Install into a subdirectory
-	mkdir -p pkg
+	mkdir pkg
 	$(MAKE) DESTDIR=pkg install
 	
 	# Generate some files
@@ -53,10 +64,10 @@ debian: all
 	echo "Description: Modular IRC bot written in GNU AWK" >> control
 	
 	cd pkg && find * -type f -print0 | xargs -0 md5sum > ../md5sums
-	tar -czf control.tar.gz control md5sums
+	tar czf control.tar.gz control md5sums
 	
 	# Pack the data
-	cd pkg && tar -czf ../data.tar.gz *
+	cd pkg && tar czf ../data.tar.gz *
 	
 	# Generate the package
 	ar -r $(PACKAGE)-$(VERSION).deb \
@@ -66,5 +77,5 @@ debian: all
 	rm -rf pkg debian-binary control md5sums control.tar.gz data.tar.gz
 
 
-.PHONY: all clean install debian
+.PHONY: all clean install debian tarball
 

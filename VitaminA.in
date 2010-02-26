@@ -7,6 +7,6 @@
 prefix=
 
 # Run the bot
-cd $prefix/lib
+cd $prefix/lib/vitamina
 exec ./core -vprefix="$prefix"
 

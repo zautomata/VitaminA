@@ -3,26 +3,29 @@ PREFIX = @prefix@
 VERSION = 2.0
 PACKAGE = vitamina
 
-# The default target
-all: VitaminA \
+# Library files to install
+LIBFILES = \
 	lib/gawkldr \
 	lib/core \
 	lib/utils.awk \
 	lib/logs \
 	lib/guess
 
+# The default target
+all: VitaminA $(LIBFILES)
+
 # Delete everything we've created
 clean:
 	-rm VitaminA
 
-# Like above but delete files configure created
+# Also delete files configure has created
 distclean: clean
 	-rm Makefile configure.app
 
 # Configure the launcher script
 VitaminA: VitaminA.in
 	# Set the paths
-	sed "s|^[ \t]*prefix=|&$(PREFIX)/lib/$(PACKAGE)|" \
+	sed "s|^[ \t]*prefix=|&$(PREFIX)|" \
 		VitaminA.in > VitaminA
 	chmod 755 VitaminA
 
@@ -33,9 +36,11 @@ VitaminA: VitaminA.in
 
 # Install the software
 install: all
-	mkdir -p $(DESTDIR)$(PREFIX)/{bin,lib/$(PACKAGE),share/$(PACKAGE)}
+	for dir in bin lib/$(PACKAGE) share/$(PACKAGE); do \
+		mkdir -p $(DESTDIR)$(PREFIX)/$$dir; \
+	done
 	cp VitaminA $(DESTDIR)$(PREFIX)/bin
-	cp -r lib/* $(DESTDIR)$(PREFIX)/lib/$(PACKAGE)
+	cp -r $(LIBFILES) $(DESTDIR)$(PREFIX)/lib/$(PACKAGE)
 	cp -r share/* $(DESTDIR)$(PREFIX)/share/$(PACKAGE)
 	
 	# Remove the .svn nonsense

@@ -1,24 +1,76 @@
 #!/bin/sh
 #
-# A heavily simplified configure script for VitaminA
+# A simple configure script for VitaminA
 #
 # Copyright Přemysl Janouch 2010. All rights reserved.
 # See the file LICENSE for licensing information.
 #
 #
 
-# Check for awk
+# Search for awk
 which awk >/dev/null 2>&1
 if [ $? -eq 1 ]; then
 	echo "Error: Cannot find awk."
 	exit 1
 fi
 
-# Check for Makefile.in
+# Search for Makefile.in
 if [ ! -f Makefile.in ]; then
 	echo "Error: Makefile.in doesn't exist."
 	exit 1
 fi
+
+# An AWK script to compare versions
+comparever='
+BEGIN {
+	FS = "."
+}
+{
+	split(ver, needver); split($0, havever);
+	for (num in needver)
+		if (havever[num] < needver[num])
+			exit 1
+}'
+
+# Prepare a "header file" for the AWK preprocessor
+echo "#define SILENT_FILE" > configure.app
+
+# Search for gawk
+# 3.1.5: length(array)
+# 3.1.0: co-processes
+echo -n "Searching for gawk... "
+which gawk > /dev/null 2>&1
+found=0
+if [ $? -eq 0 ]; then
+	version=`gawk --version | head -n1 | cut -d' ' -f3`
+	if echo $version | awk -v "ver=3.1.0" "$comparever"; then
+		echo "#define HAVE_GAWK" >> configure.app
+		if echo $version | awk -v "ver=3.1.5" "$comparever"; then
+			echo "#define HAVE_GAWK_LENGTH_ARRAY" >> configure.app
+		fi
+		echo "found ($version)"
+		found=1
+	else
+		echo "too old ($version)"
+	fi
+else
+	echo "not found"
+fi
+
+if [ -z "$found" ]; then
+	echo "Error: I need GAWK >= 3.1.0 to run."
+	exit 1
+fi
+
+# Deduce some things
+cat <<EOF >> configure.app
+#ifdef HAVE_GAWK
+	#define USING_GAWK
+	#ifdef HAVE_GAWK_LENGTH_ARRAY
+		#define HAVE_LENGTH_ARRAY
+	#endif
+#endif
+EOF
 
 # Replace all the @longparameters@ in Makefile.in
 # and generate Makefile.
@@ -27,7 +79,9 @@ BEGIN {
 	RS = " "; FS = "="
 	vars["prefix"] = "/usr/local"
 }
-/^--[^=].+/ {
+/^--.+/ {
+	if (!$2 && !/=/)
+		getline $2
 	gsub(/[+?*.|^$()\\]/, "\\&", $1)
 	vars[substr($1, 3)] = $2
 }

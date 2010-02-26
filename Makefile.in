@@ -1,26 +1,35 @@
-# These will be filled in by ./configure
+# These will be filled in by configure
 PREFIX = @prefix@
 VERSION = 2.0
 PACKAGE = vitamina
 
 # The default target
 all: VitaminA \
-	lib/core \
-	lib/guess \
-	lib/logs \
 	lib/gawkldr \
-	lib/utils.awk
+	lib/core \
+	lib/utils.awk \
+	lib/logs \
+	lib/guess
 
 # Delete everything we've created
 clean:
-	rm VitaminA
+	-rm VitaminA
+
+# Like above but delete files configure created
+distclean: clean
+	-rm Makefile configure.app
 
 # Configure the launcher script
 VitaminA: VitaminA.in
 	# Set the paths
-	sed "s|prefix=|&$(PREFIX)/lib/$(PACKAGE)|" \
+	sed "s|^[ \t]*prefix=|&$(PREFIX)/lib/$(PACKAGE)|" \
 		VitaminA.in > VitaminA
 	chmod 755 VitaminA
+
+# Preprocess files
+%: %.app configure.app utils/app.awk
+	awk -f utils/app.awk configure.app $< > $@
+	chmod --reference=$< $@
 
 # Install the software
 install: all
@@ -35,7 +44,7 @@ install: all
 # Make a source tarball
 tarball:
 	mkdir $(PACKAGE)-$(VERSION)
-	cp -r configure Makefile.in VitaminA.in INSTALL LICENSE lib share \
+	cp -r configure Makefile.in VitaminA.in INSTALL LICENSE lib share utils \
 		$(PACKAGE)-$(VERSION)
 	tar czf $(PACKAGE)-$(VERSION).tar.gz $(PACKAGE)-$(VERSION) \
 		--exclude=.svn
@@ -77,5 +86,5 @@ debian: all
 	rm -rf pkg debian-binary control md5sums control.tar.gz data.tar.gz
 
 
-.PHONY: all clean install debian tarball
+.PHONY: all clean distclean install debian tarball
 

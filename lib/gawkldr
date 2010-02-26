@@ -10,7 +10,7 @@
 # specifies gawk scripts to load before the main script.
 # This list is separated by commas. gawk won't receive
 # correct parameters if this parameter is missing.
-scripts=`echo $1 | sed 's/,/\n-f\n/'`
+scripts=`echo $1 | sed 's/,/\n-f\n/g'`
 shift
 exec gawk -f $scripts -f $*
 

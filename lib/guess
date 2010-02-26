@@ -19,6 +19,7 @@ BEGIN \
 function loadwords (    line)
 {
 	delete words
+	nwords = 0
 	RS = "\r?\n"
 	while ((getline line < (guessdir "/words.txt")) > 0)
 	{
@@ -26,7 +27,7 @@ function loadwords (    line)
 		if (line ~ /^#/ || line !~ /.=/)
 			continue
 
-		words[length(words) + 1] = line
+		words[++nwords] = line
 	}
 	RS = ORS
 }
@@ -63,7 +64,7 @@ mcmd == "PRIVMSG" \
 
 	if (mparam[1] == "!guess start")
 	{
-		if (!length(words))
+		if (!nwords)
 			pmrespond("No words in my database.")
 		else
 		{
@@ -128,12 +129,12 @@ function pmrespond (text)
 
 function pickword (    line, i, n, s)
 {
-	n = 1 + int(rand() * length(words))
+	n = 1 + int(rand() * nwords)
 	line = words[n]
 
 	# Print the hint
 	i = index(line, "=")
-	pmrespond("\x02" substr(line, 1, i - 1) ":\x0F (" n "/" length(words) ")")
+	pmrespond("\x02" substr(line, 1, i - 1) ":\x0F (" n "/" nwords ")")
 
 	# Print the progress
 	wholeword[ctx] = substr(line, i + 1)

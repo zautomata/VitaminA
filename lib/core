@@ -13,7 +13,6 @@ BEGIN \
 {
 	print "VitaminA IRC bot 2.0"
 
-	# The datadir variable is set by the launcher script.
 	config["datadir"] = ENVIRON["HOME"] "/.vitamina"
 	loadconfig()
 

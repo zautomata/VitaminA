@@ -7,12 +7,33 @@
 #
 #
 
-# Search for awk
-which awk >/dev/null 2>&1
-if [ $? -eq 1 ]; then
-	echo "Error: Cannot find awk."
-	exit 1
+# Show help if wanted
+if [ "$1" == "--help" ]; then
+cat <<EOF
+Usage: ./configure [OPTIONS]...
+
+Configuration:
+  --help           Display this help and exit
+
+Installation directories:
+  --prefix=DIR     Prefix directory for installation [/usr/local]
+
+EOF
+exit
 fi
+
+# Search for programs required for building
+for program in awk find xargs; do
+	echo -n "Searching for $program... "
+	which $program >/dev/null 2>&1
+	if [ $? -eq 1 ]; then
+		echo "not found"
+		echo "Error: Cannot continue without $program."
+		exit 1
+	else
+		echo "found"
+	fi
+done
 
 # Search for Makefile.in
 if [ ! -f Makefile.in ]; then
@@ -91,8 +112,8 @@ END {
 	{
 		for (i in vars)
 			gsub("@" i "@", vars[i])
-		print
+		print > "Makefile"
 	}
 }
-' > Makefile
+'
 

@@ -1,10 +1,19 @@
+SHELL = /bin/sh
+CHMOD = chmod
+
+version = 2.0
+package = vitamina
+
 # These will be filled in by configure
-PREFIX = @prefix@
-VERSION = 2.0
-PACKAGE = vitamina
+prefix = @prefix@
+exec_prefix = $(prefix)
+bindir = $(exec_prefix)/bin
+libexecdir = $(exec_prefix)/lib
+datarootdir = $(prefix)/share
+datadir = $(datarootdir)
 
 # Library files to install
-LIBFILES = \
+libfiles = \
 	lib/gawkldr \
 	lib/core \
 	lib/utils.awk \
@@ -12,7 +21,7 @@ LIBFILES = \
 	lib/guess
 
 # The default target
-all: VitaminA $(LIBFILES)
+all: VitaminA $(libfiles)
 
 # Delete everything we've created
 clean:
@@ -25,37 +34,48 @@ distclean: clean
 # Configure the launcher script
 VitaminA: VitaminA.in
 	# Set the paths
-	sed "s|^[ \t]*prefix=|&$(PREFIX)|" \
+	sed "s|^[ \t]*prefix=|&$(prefix)|" \
 		VitaminA.in > VitaminA
-	chmod 755 VitaminA
+	$(CHMOD) 755 VitaminA
 
 # Preprocess files
-%: %.app configure.app utils/app.awk
+
+# Alternative rule for incompatible make versions
+#.SUFFIXES:
+#.SUFFIXES: .app
+#.app:
+%:: %.app configure.app utils/app.awk
 	awk -f utils/app.awk configure.app $< > $@
-	chmod --reference=$< $@
+	$(CHMOD) --reference=$< $@
 
 # Install the software
 install: all
-	for dir in bin lib/$(PACKAGE) share/$(PACKAGE); do \
-		mkdir -p $(DESTDIR)$(PREFIX)/$$dir; \
+	for dir in $(bindir) $(libexecdir)/$(package) $(datadir)/$(package); do \
+		mkdir -p $(DESTDIR)$$dir; \
 	done
-	cp VitaminA $(DESTDIR)$(PREFIX)/bin
-	cp -r $(LIBFILES) $(DESTDIR)$(PREFIX)/lib/$(PACKAGE)
-	cp -r share/* $(DESTDIR)$(PREFIX)/share/$(PACKAGE)
+	cp VitaminA $(DESTDIR)$(bindir)
+	cp -r $(libfiles) $(DESTDIR)$(libexecdir)/$(package)
+	cp -r share/* $(DESTDIR)$(datadir)/$(package)
 	
 	# Remove the .svn nonsense
-	find $(DESTDIR)$(PREFIX) -type d -name .svn -print0 | xargs -0 rm -rf
+	find $(DESTDIR)$(prefix) -type d -name .svn -print0 | xargs -0 rm -rf
+
+# Uninstall the software
+uninstall:
+	for item in $(bindir)/VitaminA $(libexecdir)/$(package) $(datadir)/$(package); do \
+		rm -rf $$item; \
+	done
 
 # Make a source tarball
-tarball:
-	mkdir $(PACKAGE)-$(VERSION)
+dist:
+	mkdir $(package)-$(version)
 	cp -r configure Makefile.in VitaminA.in INSTALL LICENSE lib share utils \
-		$(PACKAGE)-$(VERSION)
-	tar czf $(PACKAGE)-$(VERSION).tar.gz $(PACKAGE)-$(VERSION) \
+		$(package)-$(version)
+	tar czf $(package)-$(version).tar.gz $(package)-$(version) \
 		--exclude=.svn
 	
 	# Clean up
-	rm -rf $(PACKAGE)-$(VERSION)
+	rm -rf $(package)-$(version)
 
 # Make a .deb package
 debian: all
@@ -66,8 +86,8 @@ debian: all
 	# Generate some files
 	echo "2.0" > debian-binary
 	
-	echo "Package: $(PACKAGE)" > control
-	echo "Version: $(VERSION)" >> control
+	echo "Package: $(package)" > control
+	echo "Version: $(version)" >> control
 	echo "Section: net" >> control
 	echo "Depends: gawk" >> control
 	echo "Priority: optional" >> control
@@ -84,12 +104,12 @@ debian: all
 	cd pkg && tar czf ../data.tar.gz *
 	
 	# Generate the package
-	ar -r $(PACKAGE)-$(VERSION).deb \
+	ar r $(package)-$(version).deb \
 		debian-binary control.tar.gz data.tar.gz
 	
 	# Clean up
 	rm -rf pkg debian-binary control md5sums control.tar.gz data.tar.gz
 
 
-.PHONY: all clean distclean install debian tarball
+.PHONY: all clean distclean install dist debian
 

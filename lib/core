@@ -112,7 +112,7 @@ function loadplugin (name,    harr, h, r)
 	for (h in harr)
 	{
 		if (length(handlers[harr[h]]))
-			handlers[harr[h]] += "," name
+			handlers[harr[h]] = handlers[harr[h]] "," name
 		else
 			handlers[harr[h]] = name
 	}
@@ -228,51 +228,51 @@ function processserver (    i, s, t, sent)
 			else if (mxparam[1] ~ /^!(re)?load/)
 			{
 				for (t in s)
-					handleloadrequest()
+					handleloadrequest(s[t])
 			}
 			else if (mxparam[1] ~ /^!unload/)
 			{
 				for (t in s)
-					handleunloadrequest()
+					handleunloadrequest(s[t])
 			}
 		}
 	}
 }
 
-function handleloadrequest ()
+function handleloadrequest (name)
 {
 	if (mxparam[1] ~ /^!reload/)
 	{
-		print("Reloading plugin: " s[t] "...")
-		unloadplugin(s[t])
+		print("Reloading plugin: " name "...")
+		unloadplugin(name)
 	}
 	else
-		print("Loading plugin: " s[t] "...")
+		print("Loading plugin: " name "...")
 
-	if (loadplugin(s[t]))
+	if (loadplugin(name))
 	{
-		pmrespond("Plugin " s[t] " failed to load")
-		print("Plugin " s[t] " failed to load.")
+		pmrespond("Plugin " name " failed to load")
+		print("Plugin " name " failed to load.")
 	}
 	else
 	{
-		pmrespond("Plugin " s[t] " loaded")
-		print("Plugin " s[t] " loaded.")
+		pmrespond("Plugin " name " loaded")
+		print("Plugin " name " loaded.")
 	}
 }
 
-function handleunloadrequest ()
+function handleunloadrequest (name)
 {
-	print("Unloading plugin: " s[t] "...")
-	if (unloadplugin(s[t]))
+	print("Unloading plugin: " name "...")
+	if (unloadplugin(name))
 	{
-		pmrespond("Plugin " s[t] " not loaded")
-		print("Plugin " s[t] " not loaded.")
+		pmrespond("Plugin " name " not loaded")
+		print("Plugin " name " not loaded.")
 	}
 	else
 	{
-		pmrespond("Plugin " s[t] " unloaded")
-		print("Plugin " s[t] " unloaded.")
+		pmrespond("Plugin " name " unloaded")
+		print("Plugin " name " unloaded.")
 	}
 }
 

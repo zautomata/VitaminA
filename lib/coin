@@ -54,7 +54,7 @@ mcmd == "PRIVMSG" \
 			match(mparam[1], / |$/)), s, " ")
 
 		choice = int(s[1])
-		if (choice == 0)
+		if (choice <= 0)
 			pmrespond("Invalid or missing number.")
 		else
 			pmrespond(1 + int(choice * rand()))

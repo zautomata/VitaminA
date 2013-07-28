@@ -20,6 +20,28 @@ BEGIN \
 {
 	srand()
 	initialized = 1
+	IGNORECASE = 1
+
+	eightball[1]  = "It is certain"
+	eightball[2]  = "It is decidedly so"
+	eightball[3]  = "Without a doubt"
+	eightball[4]  = "Yes – definitely"
+	eightball[5]  = "You may rely on it"
+	eightball[6]  = "As I see it, yes"
+	eightball[7]  = "Most likely"
+	eightball[8]  = "Outlook good"
+	eightball[9]  = "Yes"
+	eightball[10] = "Signs point to yes"
+	eightball[11] = "Reply hazy, try again"
+	eightball[12] = "Ask again later"
+	eightball[13] = "Better not tell you now"
+	eightball[14] = "Cannot predict now"
+	eightball[15] = "Concentrate and ask again"
+	eightball[16] = "Don't count on it"
+	eightball[17] = "My reply is no"
+	eightball[18] = "My sources say no"
+	eightball[19] = "Outlook not so good"
+	eightball[20] = "Very doubtful"
 }
 
 {
@@ -28,8 +50,6 @@ BEGIN \
 
 mcmd == "PRIVMSG" \
 {
-	mparam[1] = tolower(mparam[1])
-
 	# Context = either channel or user nickname
 	match(mwho, /^[^@!]+/)
 	ctx = substr(mwho, RSTART, RLENGTH)
@@ -43,7 +63,7 @@ mcmd == "PRIVMSG" \
 
 	if (mparam[1] == "!coin")
 	{
-		if (int(2 * rand()) == 0)
+		if (rand() > 0.5)
 			pmrespond("Heads.")
 		else
 			pmrespond("Tails.")
@@ -58,6 +78,27 @@ mcmd == "PRIVMSG" \
 			pmrespond("Invalid or missing number.")
 		else
 			pmrespond(1 + int(choice * rand()))
+	}
+	else if (mparam[1] ~ /^!choose/)
+	{
+		i = match(mparam[1], /[\t ]/)
+		if (!i)
+			pmrespond("Missing parameter.")
+		else
+		{
+			n = split(substr(mparam[1], i), s, /[|]|,/)
+			for (t in s)
+				gsub(/^[ \t]+|[ \t]+$/, "", s[t])
+			pmrespond(s[1 + int(n * rand())])
+		}
+	}
+	else if (mparam[1] ~ /^!eightball/)
+	{
+		i = match(mparam[1], /[\t ]/)
+		if (!i)
+			pmrespond("You should, you know, ask something.")
+		else
+			pmrespond(eightball[1 + int(length(eightball) * rand())] ".")
 	}
 }
 

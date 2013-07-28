@@ -5,7 +5,7 @@
 # Copyright Přemysl Janouch 2009 - 2010. All rights reserved.
 # See the file LICENSE for licensing information.
 #
-# Long live, GAWK
+# Live long, GAWK
 #
 #
 
@@ -39,6 +39,7 @@ BEGIN \
 	ircready = 0
 
 	# Run a message loop
+	PROCINFO[ircfile, "READ_TIMEOUT"] = 1800000
 	while ((ircfile |& getline) > 0)
 	{
 		parse($0)

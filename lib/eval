@@ -1,0 +1,253 @@
+#!./gawkldr utils.awk
+#
+# VitaminA eval plugin, LISP-like expression evaluator
+#
+# Copyright Přemysl Janouch 2013. All rights reserved.
+# See the file LICENSE for licensing information.
+#
+#
+
+BEGIN \
+{
+	RS = "\r\n"
+	ORS = RS
+
+	print "privmsg"
+	fflush("")
+}
+
+!initialized \
+{
+	srand()
+	initialized = 1
+	IGNORECASE = 1
+
+	# All functions have to be in this particular array
+	min_args["int"]    = 1
+	min_args["+"]      = 1
+	min_args["-"]      = 1
+	min_args["*"]      = 1
+	min_args["/"]      = 1
+	min_args["%"]      = 1
+	min_args["^"]      = 1
+	min_args["**"]     = 1
+	min_args["exp"]    = 1
+	min_args["sin"]    = 1
+	min_args["cos"]    = 1
+	min_args["atan2"]  = 2
+	min_args["log"]    = 1
+	min_args["rand"]   = 0
+	min_args["sqrt"]   = 1
+
+	min_args["pi"]     = 0
+	min_args["e"]      = 0
+
+	min_args["min"]    = 1
+	min_args["max"]    = 1
+
+	# Whereas here their presence is only optional
+	max_args["int"]    = 1
+	max_args["sin"]    = 1
+	max_args["cos"]    = 1
+	max_args["atan2"]  = 2
+	max_args["log"]    = 1
+	max_args["rand"]   = 0
+	max_args["sqrt"]   = 1
+
+	max_args["pi"]     = 0
+	max_args["e"]      = 0
+}
+
+{
+	parse($0)
+}
+
+function process_argument (arg)
+{
+	if (fun_top == 0) {
+		if (n_args[0]++ != 0)
+			return "too many results, I only expect one"
+
+		accumulator[0] = arg
+		return ""
+	}
+
+	fun = funs[fun_top]
+	if (fun in max_args && max_args[fun] <= n_args[fun_top])
+		return "too many operands for " fun
+
+	if (fun == "int") {
+		accumulator[fun_top] = int(arg)
+	} else if (fun == "+") {
+		if (n_args[fun_top] == 0)
+			accumulator[fun_top] = arg
+		else
+			accumulator[fun_top] += arg
+	} else if (fun == "-") {
+		if (n_args[fun_top] == 0)
+			accumulator[fun_top] = arg
+		else
+			accumulator[fun_top] -= arg
+	} else if (fun == "*") {
+		if (n_args[fun_top] == 0)
+			accumulator[fun_top] = arg
+		else
+			accumulator[fun_top] *= arg
+	} else if (fun == "/") {
+		if (n_args[fun_top] == 0)
+			accumulator[fun_top] = arg
+		else if (arg == 0)
+			return "division by zero"
+		else
+			accumulator[fun_top] /= arg
+	} else if (fun == "%") {
+		if (n_args[fun_top] == 0)
+			accumulator[fun_top] = arg
+		else if (arg == 0)
+			return "division by zero"
+		else
+			accumulator[fun_top] %= arg
+	} else if (fun == "^" || fun == "**" || fun == "exp") {
+		if (n_args[fun_top] == 0)
+			accumulator[fun_top] = arg
+		else
+			accumulator[fun_top] ^= arg
+	} else if (fun == "sin") {
+		accumulator[fun_top] = sin(arg)
+	} else if (fun == "cos") {
+		accumulator[fun_top] = cos(arg)
+	} else if (fun == "atan2") {
+		if (n_args[fun_top] == 0)
+			accumulator[fun_top] = arg
+		else
+			accumulator[fun_top] = atan2(accumulator[fun_top], arg)
+	} else if (fun == "log") {
+		accumulator[fun_top] = log(arg)
+	} else if (fun == "rand") {
+		# Just for completeness, execution never gets here
+	} else if (fun == "sqrt") {
+		accumulator[fun_top] = sqrt(arg)
+	} else if (fun == "min") {
+		if (n_args[fun_top] == 0)
+			accumulator[fun_top] = arg
+		else if (accumulator[fun_top] > arg)
+			accumulator[fun_top] = arg
+	} else if (fun == "max") {
+		if (n_args[fun_top] == 0)
+			accumulator[fun_top] = arg
+		else if (accumulator[fun_top] < arg)
+			accumulator[fun_top] = arg
+	} else
+		return "internal error, unhandled operands for " fun
+
+	n_args[fun_top]++
+	return ""
+}
+
+function process_end ()
+{
+	if (fun_top <= 0)
+		return "extraneous ')'"
+
+	fun = funs[fun_top]
+	if (!(fun in min_args))
+		return "internal error, unhandled ')' for '" fun "'"
+	if (min_args[fun] > n_args[fun_top])
+		return "not enough operands for '" fun "'"
+
+	# There's no 'init' function to do it in
+	if (fun == "rand")
+		accumulator[fun_top] = rand()
+	else if (fun == "pi")
+		accumulator[fun_top] = 3.141592653589793
+	else if (fun == "e")
+		accumulator[fun_top] = 2.718281828459045
+
+	return process_argument(accumulator[fun_top--])
+}
+
+mcmd == "PRIVMSG" \
+{
+	# Context = either channel or user nickname
+	match(mwho, /^[^@!]+/)
+	ctx = substr(mwho, RSTART, RLENGTH)
+	if (mparam[0] ~ /^#/)
+	{
+		ctxquote = ctx ": "
+		ctx = mparam[0]
+	}
+	else
+		ctxquote = ""
+
+	if (mparam[1] ~ /^!eval/) {
+		i = match(mparam[1], /[\t ]/)
+		if (!i)
+			pmrespond("expression missing")
+		else {
+			input = substr(mparam[1], i + 1)
+
+			delete funs
+			delete accumulator
+			delete n_args
+
+			fun_top = 0
+			funs[0] = ""
+			accumulator[0] = 0
+			n_args[0] = 0
+
+			if (match(input, "^ *"))
+				input = substr(input, RLENGTH + 1)
+
+			if (input == "")
+				res = "expression missing"
+			else
+				res = ""
+
+			while (res == "" && input != "") {
+				if (match(input, "^(-?[0-9]+\\.?[0-9]*) *", g)) {
+					input = substr(input, RLENGTH + 1)
+					res = process_argument(g[1])
+				} else if (match(input, "^[(]([^ ()]+)( *)", g)) {
+					input = substr(input, RLENGTH + 1)
+
+					if (!(g[1] in min_args))
+						res = "undefined function '" g[1] "'"
+					else {
+						fun_top++
+						funs[fun_top] = g[1]
+						accumulator[fun_top] = 636363
+						n_args[fun_top] = 0
+					}
+				} else if (match(input, "^[)] *", g)) {
+					input = substr(input, RLENGTH + 1)
+					res = process_end()
+				} else
+					res = "invalid input at '" substr(input, 1, 10) "'"
+			}
+
+			if (res == "") {
+				if (fun_top != 0)
+					res = "unclosed '" funs[fun_top] "'"
+				else if (n_args[0] != 1)
+					res = "internal error, expected one result" \
+						", got " n_args[0] " instead"
+			}
+
+			if (res == "")
+				pmrespond(accumulator[0])
+			else
+				pmrespond(res)
+		}
+	}
+}
+
+function pmrespond (text)
+{
+	print "PRIVMSG " ctx " :" ctxquote text
+}
+
+{
+	print ""
+	fflush("")
+}
+

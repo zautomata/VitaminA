@@ -94,7 +94,7 @@ debian: all
 	echo "Architecture: all" >> control
 	echo "Installed-Size: `du -ks pkg | cut -f 1`" >> control
 	echo "Maintainer: Přemysl Janouch <p.janouch@gmail.com>" >> control
-	echo "Homepage: http://vitamina.googlecode.com" >> control
+	echo "Homepage: https://github.com/pjanouch/VitaminA" >> control
 	echo "Description: Modular IRC bot written in GNU AWK" >> control
 	
 	cd pkg && find * -type f -print0 | xargs -0 md5sum > ../md5sums
